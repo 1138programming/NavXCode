@@ -1,9 +1,12 @@
+//#include <Joystick.h>
+//#include <SampleRobot.h>
 #include "WPILib.h"
-//#include "c:\Users\eeuser\wpilib\user\cpp\include\CANTalon.h"
-#include "CANTalon.h"
-#include "AHRS.h"
-#include <SmartDashboard/SendableChooser.h>
-#include <SmartDashboard/SmartDashboard.h>
+#include "c:\Users\eeuser\wpilib\user\cpp\include\CANTalon.h"
+//#include "CANTalon.h"
+//#include "AHRS.h"
+//#include <SmartDashboard/SendableChooser.h>
+#include "SmartDashboard/SmartDashboard.h"
+
 
 /**
  * This sample program shows how to control a motor using a joystick. In the operator
@@ -14,74 +17,75 @@
  * to allow other threads to run. This is generally a good idea, especially since the joystick
  * values are only transmitted from the Driver Station once every 20ms.
  */
-class Robot : public SampleRobot
+
+class Robot : public frc::SampleRobot
 {
 	// The motor to control with the Joystick.
 	// This uses a Talon speed controller; use the Victor or Jaguar classes for
 	//   other speed controllers.
-	CANTalon* motor_rear_left;
-//	CANTalon* motor_front_left;
-	CANTalon* motor_rear_right;
-//	CANTalon* motor_front_right;
-	Joystick* l_stick; //Logitech Joystick
-	Joystick* r_stick; //XBox Joystick
-	AHRS *ahrs;
-	LiveWindow *lw = LiveWindow::GetInstance();
-
+//	CANTalon* right_motor;
+//	CANTalon* left_motor
+	Joystick* right_stick; //Logitech Joystick
+	Joystick* left_stick;
+//	LiveWindow *lw = LiveWindow::GetInstance();
+	CANTalon* LeftRearBaseMotor; //Talon 1 in CAN Bus
+		CANTalon* LeftFrontBaseMotor; //Talon 2 in CAN Bus
+		CANTalon* RightRearBaseMotor; //Talon 3 in CAN Bus
+		CANTalon* RightFrontBaseMotor; //Talon 4 in CAN Bus
 
 	//update every 0.005 seconds/5 milliseconds.
 	double kUpdatePeriod = 0.005;
+	const float KLeftMaster = 1; //KLeftMaster = Master Talon for left side
+		const float KRightMaster = 3; //KRightMaster = Master Talon for right side
 
+		const float KDeadZoneLimit = 0.1;
 public:
 
-	/**
-	 * Runs the motor from the output of a Joystick.
-	 */
-	void OperatorControl() {
-		l_stick = new Joystick(1); // Initialize Joystick on port 1.
-		r_stick = new Joystick(2); // Initialize Joystick on port 2.
+	 void OperatorControl()
+	 {
+//		test_motor = new CANTalon(9)
+		 left_stick = new Joystick(1);
+		right_stick = new Joystick(0);
+//		lw->AddSensor("Robot", "CANTalon", test_motor);
+//		lw->Run();
+//
+		 	RightFrontBaseMotor = new CANTalon(KRightMaster); //RightFrontBase is the master Talon for the right side
+			RightFrontBaseMotor->SetSafetyEnabled(true);
 
-		ahrs = new AHRS(SPI::Port::kMXP);
-		//ahrs->ZeroYaw();
-		lw->AddSensor("Robot", "9AxisGyro", ahrs);
+			RightRearBaseMotor = new CANTalon(2);
+			RightRearBaseMotor->SetControlMode(CANTalon::kFollower); //RightRearBase is the follower to RightRearBase
+			RightRearBaseMotor->Set(KRightMaster);
 
-		//Left side motors
-		motor_rear_left = new CANTalon(2);
-	//	motor_front_left = new CANTalon(4);
-		//The front motor is reversed
-//		motor_front_left->SetInverted(true);
-		//The rear motor is following the front motor
-	//	motor_rear_left->SetControlMode(CANTalon::kFollower);
-	//	motor_rear_left->Set(2);
+			//Sets up Left motors
+			//Left base motors are inverted
+			LeftFrontBaseMotor = new CANTalon(KLeftMaster); //LeftFrontBase is the master Talon on the Left side
+			LeftFrontBaseMotor->SetSafetyEnabled(true);
+			LeftFrontBaseMotor->SetInverted(true);
 
-		//Right side motors
-		motor_rear_right = new CANTalon(1);
-	//	motor_front_right = new CANTalon(3);
-		//The front motor is reversed
-	//	motor_front_right->SetInverted(true);
-		//The rear motor is following the front motor
-	//	motor_rear_right->SetControlMode(CANTalon::kFollower);
-	//	motor_rear_right->Set(1);
+			LeftRearBaseMotor = new CANTalon(4);
+			LeftRearBaseMotor->SetControlMode(CANTalon::kFollower); //LeftRearBase is the follower to the LeftRearBase
+			LeftRearBaseMotor->Set(KLeftMaster);
+			LeftRearBaseMotor->SetInverted(true);
 
-		//12bit encoder, 4096 ticks per rotation
-//		motor_front.SetFeedbackDevice(CANTalon::CtreMagEncoder_Absolute);
-//		motor_front.SetSensorDirection(true); /* keep sensor and motor in phase */
-//		motor_front.SetFeedbackDevice(CANTalon::CtreMagEncoder_Relative);
-//		motor_front.SetSensorDirection(true); /* keep sensor and motor in phase */
-		while (IsOperatorControl() && IsEnabled()) {
-			// Set the motor controller's output.
-			// This takes a number from -1 (100% speed in reverse) to +1 (100% speed forwards).
-			//motor_rear_left->Set(r_stick->GetY());
-			//motor_rear_right->Set(r_stick->GetY());
-			lw->Run();
-
-			if(ahrs->GetYaw() < 15 && ahrs->GetYaw() > -15)
-				motor_rear_right->Set(0.2);
-			else
-				motor_rear_right->Set(0);
-			Wait(kUpdatePeriod); // Wait 5ms for the next update.
+			while(IsOperatorControl() && IsEnabled())
+			{
+				RightFrontBaseMotor->Set(right_stick->GetY());
+				LeftFrontBaseMotor->Set(left_stick->GetY());
+			}
 		}
-	}
-};
 
+	};
+
+/*motor->Reset();
+		RightFrontBaseMotor->Reset();
+		float encoder = LeftFrontBaseMotor->GetEncPosition();
+		float encoder2 = RightFrontBaseMotor->GetEncPosition();
+		float distance = 10;
+		while(encoder < distance && encoder2 < distance)
+		{
+			RightFrontBaseMotor->Set(.25);
+			LeftFrontBaseMotor->Set(.25);
+			encoder = LeftFrontBaseMotor->GetEncPosition();
+			encoder2 = RightFrontBaseMotor->GetEncPosition();
+		}*/
 START_ROBOT_CLASS(Robot)
